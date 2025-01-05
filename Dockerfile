@@ -4,19 +4,6 @@ FROM ubuntu:20.04
 # Environment setup
 ENV DEBIAN_FRONTEND=noninteractive LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
-# Default build arg variables for user and VNC passwords
-ARG BUILD_USER=vncuser
-ARG BUILD_PASS=Strangely8-Yearly-Clubbed
-ARG BUILD_VNCPASS=Throwing3-Gooey-Postcard
-
-# Environment variables for user and VNC passwords
-ENV USERNAME=${BUILD_USER}
-ENV PASSWORD=${BUILD_PASS}
-ENV VNC_PASSWORD=${BUILD_VNCPASS}
-
-# Default `.deb` filename (can be overridden)
-ENV DEB_FILE=synology-drive-client-16102.x86_64.deb
-
 # Install dependencies and setup VNC desktop
 RUN apt-get update && apt-get install -y \
     wget \
@@ -37,6 +24,19 @@ RUN apt-get update && apt-get install -y \
 
 # Set up locale
 RUN locale-gen en_US.UTF-8
+
+# Default build arg variables for user and VNC passwords
+ARG BUILD_USER=vncuser
+ARG BUILD_PASS=Strangely8-Yearly-Clubbed
+ARG BUILD_VNCPASS=Throwing3-Gooey-Postcard
+
+# Environment variables for user and VNC passwords
+ENV USERNAME=${BUILD_USER}
+ENV PASSWORD=${BUILD_PASS}
+ENV VNC_PASSWORD=${BUILD_VNCPASS}
+
+# Default `.deb` filename (can be overridden)
+ENV DEB_FILE=synology-drive-client-16102.x86_64.deb
 
 # Add and install Synology Drive Client
 COPY ${DEB_FILE} /tmp/synology-drive-client.deb
