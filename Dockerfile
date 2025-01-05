@@ -43,12 +43,11 @@ RUN apt-get update && apt-get install -y \
     ln -s /opt/novnc/vnc.html /opt/novnc/index.html
 
 # Default build arg variables for user and VNC passwords
-ARG BUILD_USER=vncuser
 ARG BUILD_PASS=Strangely8-Yearly-Clubbed
 ARG BUILD_VNCPASS=Throwing3-Gooey-Postcard
 
 # Environment variables for user and VNC passwords
-ENV USERNAME=${BUILD_USER}
+ENV USERNAME=vncuser
 ENV PASSWORD=${BUILD_PASS}
 ENV VNC_PASSWORD=${BUILD_VNCPASS}
 
