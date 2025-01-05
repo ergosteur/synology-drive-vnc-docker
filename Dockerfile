@@ -1,13 +1,18 @@
-# Use an appropriate Ubuntu base image
+# Base image
 FROM ubuntu:20.04
 
-# Set environment variables to prevent interactive prompts
-ENV DEBIAN_FRONTEND=noninteractive \
-    LANG=en_US.UTF-8 \
-    LANGUAGE=en_US:en \
-    LC_ALL=en_US.UTF-8
+# Environment setup
+ENV DEBIAN_FRONTEND=noninteractive LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
-# Update and install required dependencies
+# Default environment variables for user and VNC passwords
+ENV USERNAME=vncuser
+ENV PASSWORD=vncpassword
+ENV VNC_PASSWORD=vncpassword
+
+# Default `.deb` filename (can be overridden)
+ENV DEB_FILE=synology-drive-client-16102.x86_64.deb
+
+# Install dependencies and setup VNC desktop
 RUN apt-get update && apt-get install -y \
     wget \
     software-properties-common \
@@ -28,13 +33,9 @@ RUN apt-get update && apt-get install -y \
 # Set up locale
 RUN locale-gen en_US.UTF-8
 
-# Add the Synology Drive Client `.deb` file to the image
-COPY synology-drive-client-16102.x86_64.deb /tmp/synology-drive-client.deb
-
-# Install the Synology Drive Client
+# Add and install Synology Drive Client
+COPY ${DEB_FILE} /tmp/synology-drive-client.deb
 RUN dpkg -i /tmp/synology-drive-client.deb || apt-get install -f -y
-
-# Clean up
 RUN rm -f /tmp/synology-drive-client.deb
 
 # Install noVNC and websockify
@@ -46,21 +47,30 @@ RUN apt-get update && apt-get install -y \
     git clone https://github.com/novnc/websockify.git /opt/websockify && \
     ln -s /opt/novnc/vnc.html /opt/novnc/index.html
 
-# Create a user for the VNC session
-RUN useradd -m -s /bin/bash vncuser && \
-    echo "vncuser:vncpassword" | chpasswd && \
-    mkdir -p /home/vncuser/.vnc && \
-    chown -R vncuser:vncuser /home/vncuser
+# Create a default sync directory - mount this as a volume
+RUN mkdir -p /data && \
+    chown -R $USERNAME:$USERNAME /data
 
-# Set up VNC server
-RUN echo '#!/bin/bash\n\
-x11vnc -forever -usepw -create' > /usr/local/bin/start-vnc && \
+# Create user and configure password
+RUN useradd -m -s /bin/bash $USERNAME && \
+    echo "$USERNAME:$PASSWORD" | chpasswd && \
+    mkdir -p /home/$USERNAME/.vnc && \
+    chown -R $USERNAME:$USERNAME /home/$USERNAME
+
+# Configure VNC server
+RUN echo "#!/bin/bash\n\
+x11vnc -forever -rfbauth /home/$USERNAME/.vnc/passwd -create" > /usr/local/bin/start-vnc && \
     chmod +x /usr/local/bin/start-vnc
+
+# Add script to set VNC password
+RUN echo "$VNC_PASSWORD" | x11vnc -storepasswd - /home/$USERNAME/.vnc/passwd && \
+    chmod 600 /home/$USERNAME/.vnc/passwd && \
+    chown $USERNAME:$USERNAME /home/$USERNAME/.vnc/passwd
 
 # Set up Supervisor to manage services
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Expose the VNC and noVNC ports
+# Expose VNC and noVNC ports
 EXPOSE 5900 6080
 
 # Start Supervisor
